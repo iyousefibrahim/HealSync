@@ -10,7 +10,7 @@ app.use(express.json());
 app.use(cookieParser());
 
 // Routes
-const adminRoute = require('./routes/admin.routes');
+const adminRoute = require('./routes/admin/admin.routes');
 app.use('/api/v1', adminRoute);
 
 
