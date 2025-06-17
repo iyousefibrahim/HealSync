@@ -6,7 +6,6 @@ const Admin = require('../models/admin.model');
 const AppError = require("../utils/appError");
 const mongoose = require('mongoose');
 
-// Upload Photos
 // pagination
 
 const RoleModels = {
@@ -93,9 +92,18 @@ exports.createUser = asyncWrapper(async (req, res) => {
         throw new AppError('Invalid role type!', 400);
     }
 
-    const exists = await Model.findOne({ email: userData.email });
-    if (exists) {
+    const emailExists = await Model.findOne({ email: userData.email });
+    if (emailExists) {
         throw new AppError('User already exists!', 409);
+    }
+
+    const usernameExists = await Model.findOne({ username });
+    if (usernameExists) {
+        throw new AppError('Username already exists!', 409);
+    }
+
+    if (req.file && req.file.path) {
+        userData.profileImage = req.file.path;
     }
 
     const newUser = await Model.create(userData);
@@ -135,6 +143,7 @@ exports.updateUser = asyncWrapper(async (req, res) => {
         throw new AppError('User not found!', 404);
     }
 
+    user.profileImage = req.file.path;
     Object.assign(user, userData);
 
     await user.save();
