@@ -97,7 +97,7 @@ exports.createUser = asyncWrapper(async (req, res) => {
         throw new AppError('User already exists!', 409);
     }
 
-    const usernameExists = await Model.findOne({ username });
+    const usernameExists = await Model.findOne({ username:userData.username });
     if (usernameExists) {
         throw new AppError('Username already exists!', 409);
     }

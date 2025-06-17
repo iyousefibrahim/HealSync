@@ -1,9 +1,19 @@
 const createJWT = require('../../utils/createJWT');
 const asyncWrapper = require('../../middlewares/asyncWrapper');
 const AppError = require('../../utils/appError');
+const Doctor = require("../../models/doctor.model");
+const Patient = require("../../models/patient.model");
+const Secretary = require("../../models/secretary.model");
 const Admin = require('../../models/admin.model');
 const bcrypt = require('bcryptjs');
 const httpStatusCode = require('../../utils/httpStatusCode');
+
+const RoleModels = {
+    admin: Admin,
+    doctor: Doctor,
+    patient: Patient,
+    secretary: Secretary
+};
 
 // exports.register = asyncWrapper(async (req, res) => {
 
@@ -28,7 +38,7 @@ exports.adminLogin = asyncWrapper(async (req, res) => {
     }
 
     const adminId = oldAdmin._id;
-    const token = await createJWT({ email, username, adminId, role: 'admin' });
+    const token = await createJWT({ email, username, id: adminId, role: 'admin' });
 
     res.cookie('token', token, {
         httpOnly: true,
@@ -41,6 +51,26 @@ exports.adminLogin = asyncWrapper(async (req, res) => {
 
 });
 
-// exports.me = asyncWrapper((req, res) => {
-//     // code
-// });
+exports.adminLogout = asyncWrapper(async (req, res) => {
+    res.clearCookie('token', {
+        httpOnly: true,
+        secure: false,
+        sameSite: 'strict',
+    });
+
+    res.json({ status: httpStatusCode.success, message: "Logged out successfully" });
+});
+
+exports.me = asyncWrapper(async (req, res) => {
+    const user = req.user;
+    const model = RoleModels[user.role.toLowerCase()];
+
+    const me = await model.findById(user.id).select('-password');
+    if (!me) {
+        throw new AppError('No user found!', 400)
+    }
+    res.json({
+        status: httpStatusCode.success,
+        data: me
+    })
+});
