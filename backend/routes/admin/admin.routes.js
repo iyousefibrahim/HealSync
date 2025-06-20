@@ -8,8 +8,7 @@ const upload = require('../../middlewares/upload');
 
 // Admin Authentication Routes
 router.post('/auth/admin/login', authController.adminLogin);
-router.post('/auth/admin/logout', verifyToken, authController.adminLogout);
-
+router.post('/auth/admin/logout', verifyToken, authController.logout);
 
 // Users
 router.get('/admin/users', verifyToken, verifyRole('admin'), usersController.getAllUsers);

@@ -15,14 +15,113 @@ const RoleModels = {
     secretary: Secretary
 };
 
-// exports.register = asyncWrapper(async (req, res) => {
+// Register is for patients Only!
+exports.register = asyncWrapper(async (req, res) => {
+    const { firstName, lastName, username, password, phone, email } = req.body;
 
-// });
+    if (!firstName || !lastName || !username || !password || !phone || !email) {
+        throw new AppError("All fields are required!", 400);
+    }
 
-// exports.login = asyncWrapper(async (req, res) => {
+    if (!req.file || !req.file.path) {
+        throw new AppError("User profile image is required!", 400);
+    }
 
-// });
+    const existsUser = await Patient.findOne({
+        $or: [{ email }, { username }]
+    });
 
+    if (existsUser) {
+        throw new AppError("Email or username already exists!", 400);
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    const user = await Patient.create({
+        firstName,
+        lastName,
+        username,
+        email,
+        password: hashedPassword,
+        phone,
+        profileImage: req.file.path
+    });
+
+    user.password = undefined;
+
+    const token = await createJWT({
+        email: user.email,
+        username: user.username,
+        id: user._id,
+        role: 'patient'
+    });
+
+    res.cookie('token', token, {
+        httpOnly: true,
+        maxAge: parseInt(process.env.COOKIE_EXPIRES_IN) * 24 * 60 * 60 * 1000,
+        secure: false,
+        sameSite: 'strict',
+    });
+
+    res.json({
+        status: httpStatusCode.success,
+        token
+    });
+});
+
+exports.login = asyncWrapper(async (req, res) => {
+    const { email, password, role } = req.body;
+
+    if (!email || !password || !role) {
+        throw new AppError("Email, password, and role are required!", 400);
+    }
+
+    const model = RoleModels[role.toLowerCase()];
+    if (!model) {
+        throw new AppError("Invalid role!", 400);
+    }
+
+    const user = await model.findOne({ email });
+    if (!user) {
+        throw new AppError("Invalid email or password!", 401);
+    }
+
+    const isPasswordCorrect = await bcrypt.compare(password, user.password);
+    if (!isPasswordCorrect) {
+        throw new AppError("Invalid email or password!", 401);
+    }
+
+    const token = await createJWT({
+        id: user._id,
+        email: user.email,
+        username: user.username,
+        role
+    });
+
+    res.cookie("token", token, {
+        httpOnly: true,
+        secure: false,
+        sameSite: "strict",
+        maxAge: parseInt(process.env.COOKIE_EXPIRES_IN) * 24 * 60 * 60 * 1000
+    });
+
+    user.password = undefined;
+
+    res.status(200).json({
+        status: "success",
+        token,
+    });
+});
+
+exports.logout = asyncWrapper(async (req, res) => {
+    res.clearCookie('token', {
+        httpOnly: true,
+        secure: false,
+        sameSite: 'strict',
+    });
+
+    res.json({ status: httpStatusCode.success, message: "Logged out successfully" });
+});
 
 exports.adminLogin = asyncWrapper(async (req, res) => {
 
@@ -49,16 +148,6 @@ exports.adminLogin = asyncWrapper(async (req, res) => {
 
     res.json({ status: httpStatusCode.success, token });
 
-});
-
-exports.adminLogout = asyncWrapper(async (req, res) => {
-    res.clearCookie('token', {
-        httpOnly: true,
-        secure: false,
-        sameSite: 'strict',
-    });
-
-    res.json({ status: httpStatusCode.success, message: "Logged out successfully" });
 });
 
 exports.me = asyncWrapper(async (req, res) => {

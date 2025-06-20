@@ -11,7 +11,10 @@ app.use(cookieParser());
 
 // Routes
 const adminRoute = require('./routes/admin/admin.routes');
+const authRoute = require('./routes/auth.routes');
+
 app.use('/api/v1', adminRoute);
+app.use('/api/v1', authRoute);
 
 
 // Handle 404
